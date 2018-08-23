@@ -24,7 +24,7 @@
         android:layout_centerHorizontal="true"
         android:textColor="@color/colorPrimaryDark"
         android:textSize="15sp"
-        android:text="status"/>
+        android:text="点击上方按钮开始"/>
 
     <com.example.imac.alivoicerecognition.View.RippleSpeechRecordView
         android:id="@+id/view_record_speech"

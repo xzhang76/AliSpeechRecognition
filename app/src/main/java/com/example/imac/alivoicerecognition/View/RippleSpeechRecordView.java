@@ -120,6 +120,7 @@ public class RippleSpeechRecordView extends View {
 
     public void stopRecognition() {
         mProgress = 0;
+        mHandler.removeMessages(MSG_START_RECORD);
         postInvalidate();
     }
 
