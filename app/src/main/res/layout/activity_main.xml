@@ -14,15 +14,27 @@
         android:hint="这里显示语音识别的内容"
         android:textSize="15dp"/>
 
+    <TextView
+        android:id="@+id/status_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="10dp"
+        android:padding="10dp"
+        android:layout_centerHorizontal="true"
+        android:textColor="@color/colorPrimaryDark"
+        android:textSize="15sp"
+        android:text="status"/>
+
     <com.example.imac.alivoicerecognition.View.RippleSpeechRecordView
         android:id="@+id/view_record_speech"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="20dp"
-        android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
-        app:circleRadius="20dp"
-        app:circleInterval="2dp"
-        app:circleColor="@color/colorPrimaryDark"/>
+        android:layout_above="@id/status_tv"
+        app:circleRadius="40dp"
+        app:circleColor="#bcccbe"/>
+
+
 
 </RelativeLayout>
