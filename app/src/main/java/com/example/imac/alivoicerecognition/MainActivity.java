@@ -1,13 +1,17 @@
 package com.example.imac.alivoicerecognition;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
+import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.imac.alivoicerecognition.HttpUtil.HttpResponse;
 import com.example.imac.alivoicerecognition.HttpUtil.HttpUtil;
@@ -41,6 +45,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mSpeechRecordView.setOnClickListener(this);
         mContentView = findViewById(R.id.speech_content_tv);
         mStatusTv = findViewById(R.id.status_tv);
+        int storagePermission = this.checkSelfPermission(
+                Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        if (storagePermission != PackageManager.PERMISSION_GRANTED) {
+            //这里就会弹出对话框
+            this.requestPermissions(
+                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                    0);
+
+        }
 
     }
 
@@ -58,6 +71,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void startAudioRecord() {
+        if (Build.VERSION.SDK_INT >= 23) {
+            //我是在Fragment里写代码的，因此调用getActivity
+            //如果不想判断SDK，可以使用ActivityCompat的接口来检查和申请权限
+            int permission = this.checkSelfPermission(
+                    Manifest.permission.RECORD_AUDIO);
+
+            if (permission != PackageManager.PERMISSION_GRANTED) {
+                //这里就会弹出对话框
+                this.requestPermissions(
+                        new String[]{Manifest.permission.RECORD_AUDIO},
+                        1);
+
+                return;
+            }
+
+
+        }
         File speechPath = new File(SPEECH_PATH);
         if (!speechPath.exists()) {
             speechPath.mkdirs();
@@ -77,6 +107,30 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         manager.stopRecord();
         mIsRecording = false;
         super.onPause();
+    }
+
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        if (requestCode == 0) {
+            if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(this,
+                        "Storage Permission Denied",
+                        Toast.LENGTH_SHORT)
+                        .show();
+            }
+        } else if (requestCode == 1) {
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                startAudioRecord();
+            } else {
+                Toast.makeText(this,
+                        "Record Audio Permission Denied",
+                        Toast.LENGTH_SHORT)
+                        .show();
+            }
+        } else {
+            super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        }
     }
 
     @Override
@@ -101,7 +155,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 if (null != mSpeechFile) {
                     //使用对应的ASR模型 详情见文档部分2
                     String model = "chat";
-                    final String url = "https://nlsapi.aliyun.com/recognize?model=" + model;
+                    final String url = "http://nlsapi.aliyun.com/recognize?model=" + model;
                     byte[] buffer = null;
                     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
                         try {
