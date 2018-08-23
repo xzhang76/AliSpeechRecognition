@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <attr name="circleRadius" format="dimension" />
+    <attr name="circleInterval" format="dimension" />
+    <attr name="circleColor" format="color" />
+    <attr name="maxCircleCount" format="integer" />
+    <declare-styleable name="RippleSpeechRecordView">
+        <attr name="circleRadius" />
+        <attr name="circleInterval" />
+        <attr name="circleColor" />
+        <attr name="maxCircleCount" />
+    </declare-styleable>
+</resources>
