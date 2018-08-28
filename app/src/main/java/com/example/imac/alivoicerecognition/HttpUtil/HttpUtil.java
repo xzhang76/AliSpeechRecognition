@@ -13,13 +13,12 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
+import java.util.Base64;
 import java.util.Date;
 import java.util.Locale;
 
 import javax.crypto.spec.SecretKeySpec;
 import javax.crypto.Mac;
-
-import sun.misc.BASE64Encoder;
 
 @SuppressWarnings("restriction")
 public class HttpUtil {
@@ -37,12 +36,15 @@ public class HttpUtil {
             mdTemp = MessageDigest.getInstance("MD5");
             mdTemp.update(s);
             byte[] md5Bytes = mdTemp.digest();
-            BASE64Encoder b64Encoder = new BASE64Encoder();
-            encodeStr = b64Encoder.encode(md5Bytes);
-            /* java 1.8以上版本支持
-            Encoder encoder = Base64.getEncoder();
-            encodeStr = encoder.encodeToString(md5Bytes);
-            */
+//            BASE64Encoder b64Encoder = new BASE64Encoder();
+//            encodeStr = b64Encoder.encode(md5Bytes);
+            /* java 1.8以上版本支持 */
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                Base64.Encoder encoder = Base64.getEncoder();
+                encodeStr = encoder.encodeToString(md5Bytes);
+            } else {
+                encodeStr = android.util.Base64.encodeToString(md5Bytes, android.util.Base64.NO_WRAP);
+            }
         } catch (Exception e) {
             throw new Error("Failed to generate MD5 : " + e.getMessage());
         }
@@ -59,11 +61,14 @@ public class HttpUtil {
             Mac mac = Mac.getInstance("HmacSHA1");
             mac.init(signingKey);
             byte[] rawHmac = mac.doFinal(data.getBytes());
-            result = (new BASE64Encoder()).encode(rawHmac);
-            /*java 1.8以上版本支持
-            Encoder encoder = Base64.getEncoder();
-            result = encoder.encodeToString(rawHmac);
-            */
+//            result = (new BASE64Encoder()).encode(rawHmac);
+            /*java 1.8以上版本支持 */
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                Base64.Encoder encoder = Base64.getEncoder();
+                result = encoder.encodeToString(rawHmac);
+            } else {
+                result = android.util.Base64.encodeToString(rawHmac, android.util.Base64.NO_WRAP);
+            }
         } catch (Exception e) {
             throw new Error("Failed to generate HMAC : " + e.getMessage());
         }
