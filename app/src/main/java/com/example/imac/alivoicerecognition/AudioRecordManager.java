@@ -6,11 +6,14 @@ import android.media.MediaRecorder;
 import android.os.Environment;
 import android.util.Log;
 
+import java.io.BufferedOutputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 
 public class AudioRecordManager {
 
@@ -73,9 +76,12 @@ public class AudioRecordManager {
 
     /**
      * 开始录音
-     *
      */
     public void startRecord() {
+        if (OpusJniTool.initOpus() != 0) {
+            Log.e("opus", "Opus tool init fail.");
+            return;
+        }
         audioRecord.startRecording();
         // 让录制状态为true
         mIsRecording = true;
@@ -91,9 +97,9 @@ public class AudioRecordManager {
         if (audioRecord != null) {
             Log.d("demo", "stopRecord");
             mIsRecording = false;//停止文件写入
-            audioRecord.stop();
             audioRecord.release();//释放资源
             audioRecord = null;
+            OpusJniTool.close();
         }
     }
 
@@ -112,30 +118,39 @@ public class AudioRecordManager {
      */
     private void writeDateTOFile() {
         // new一个byte数组用来存一些字节数据，大小为缓冲区大小
-        byte[] audiodata = new byte[bufferSizeInBytes];
-        FileOutputStream fos = null;
-        int readsize = 0;
+        int bufferSize = 480;
+        short[] audioData = new short[bufferSize];
+        int readSize = 0;
+        DataOutputStream dos = null;
         try {
             File file = new File(mFileWav);
             if (file.exists()) {
                 file.delete();
             }
-            fos = new FileOutputStream(file);// 建立一个可存取字节的文件
+            OutputStream os = new FileOutputStream(file);
+            BufferedOutputStream bos = new BufferedOutputStream(os);
+            dos = new DataOutputStream(bos);
+
+            while (mIsRecording) {
+                readSize = audioRecord.read(audioData, 0, bufferSize);
+                if (AudioRecord.ERROR_INVALID_OPERATION != readSize) {
+                    //编码
+                    short[] encoderShort = OpusJniTool.opusEncoder(audioData, readSize);
+                    //解码
+                    short[] decodeShort = OpusJniTool.opusDecode(encoderShort, encoderShort.length, readSize);
+
+                    for (int i = 0; i < decodeShort.length; i++) {
+                        dos.writeShort(decodeShort[i]);
+                    }
+                }
+            }
+            audioRecord.stop();
+
         } catch (Exception e) {
             e.printStackTrace();
         }
-        while (mIsRecording) {
-            readsize = audioRecord.read(audiodata, 0, bufferSizeInBytes);
-            if (AudioRecord.ERROR_INVALID_OPERATION != readsize) {
-                try {
-                    fos.write(audiodata);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
         try {
-            fos.close();// 关闭写入流
+            dos.close();// 关闭写入流
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -175,7 +175,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     }
 
                     if (null != buffer) {
-                        final HttpResponse response = HttpUtil.sendAsrPost(buffer, "pcm", 16000, url, ak_id, ak_secret);
+                        final HttpResponse response = HttpUtil.sendAsrPost(buffer, "opus", 16000, url, ak_id, ak_secret);
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
