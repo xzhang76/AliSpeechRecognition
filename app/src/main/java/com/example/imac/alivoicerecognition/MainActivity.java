@@ -74,8 +74,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (Build.VERSION.SDK_INT >= 23) {
             //我是在Fragment里写代码的，因此调用getActivity
             //如果不想判断SDK，可以使用ActivityCompat的接口来检查和申请权限
-            int permission = this.checkSelfPermission(
-                    Manifest.permission.RECORD_AUDIO);
+            int permission = this.checkSelfPermission(Manifest.permission.RECORD_AUDIO);
 
             if (permission != PackageManager.PERMISSION_GRANTED) {
                 //这里就会弹出对话框
