@@ -94,13 +94,9 @@ public class AudioRecordManager {
      * 停止录音
      */
     public void stopRecord() {
-        if (audioRecord != null) {
-            Log.d("demo", "stopRecord");
-            mIsRecording = false;//停止文件写入
-            audioRecord.release();//释放资源
-            audioRecord = null;
-            OpusJniTool.close();
-        }
+        Log.d("demo", "stopRecord");
+        mIsRecording = false;//停止文件写入
+        OpusJniTool.close();
     }
 
     class AudioRecordThread implements Runnable {
@@ -145,6 +141,7 @@ public class AudioRecordManager {
                 }
             }
             audioRecord.stop();
+            audioRecord.release();//释放资源
 
         } catch (Exception e) {
             e.printStackTrace();
