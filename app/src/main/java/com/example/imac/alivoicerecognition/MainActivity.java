@@ -29,9 +29,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private RippleSpeechRecordView mSpeechRecordView;
     private TextView mContentView;
     private TextView mStatusTv;
-    private static final String SPEECH_PATH = Environment.getExternalStorageDirectory() + "/ali";
-    private File mSpeechFile;
-    private Handler mHandler;
     private boolean mIsRecording = false;
     private static final String ak_id = "LTAILd8nISBsbxB1";
     private static final String ak_secret = "LpxREKOw4eBk1UJMLKpv40T4zuxM47";
@@ -41,7 +38,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mSpeechRecordView = findViewById(R.id.view_record_speech);
-        mHandler = new Handler();
         mSpeechRecordView.setOnClickListener(this);
         mContentView = findViewById(R.id.speech_content_tv);
         mStatusTv = findViewById(R.id.status_tv);
@@ -63,6 +59,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (id == R.id.view_record_speech) {
             if (mIsRecording) {
                 stopAudioRecord();
+                AudioRecordManager.getInstance().playRecord();
                 speechRecognition();
             } else {
                 startAudioRecord();
@@ -87,13 +84,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
 
         }
-        File speechPath = new File(SPEECH_PATH);
-        if (!speechPath.exists()) {
-            speechPath.mkdirs();
-        }
-        mSpeechFile = new File(SPEECH_PATH, "/" + System.currentTimeMillis() + ".wav");
         AudioRecordManager recordManager = AudioRecordManager.getInstance();
-        recordManager.createDefaultAudio(mSpeechFile.getAbsolutePath());
         recordManager.startRecord();
         mSpeechRecordView.startRecording();
         mIsRecording = true;
@@ -151,14 +142,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         new Thread(new Runnable() {
             @Override
             public void run() {
-                if (null != mSpeechFile) {
+                File speechFile = AudioRecordManager.getInstance().getSpeechFile();
+                if (null != speechFile) {
                     //使用对应的ASR模型 详情见文档部分2
                     String model = "chat";
                     final String url = "http://nlsapi.aliyun.com/recognize?model=" + model;
                     byte[] buffer = null;
                     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
                         try {
-                            RandomAccessFile rf = new RandomAccessFile(mSpeechFile, "r");
+                            RandomAccessFile rf = new RandomAccessFile(speechFile, "r");
                             buffer = new byte[(int) rf.length()];
                             rf.readFully(buffer);
                         } catch (Exception e) {
@@ -167,7 +159,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     } else {
                         //读取本地的语音文件
                         try {
-                            Path path = FileSystems.getDefault().getPath(mSpeechFile.getAbsolutePath());
+                            Path path = FileSystems.getDefault().getPath(speechFile.getAbsolutePath());
                             buffer = Files.readAllBytes(path);
                         } catch (IOException e) {
                             e.printStackTrace();

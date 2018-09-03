@@ -1,18 +1,23 @@
 package com.example.imac.alivoicerecognition;
 
 import android.media.AudioFormat;
+import android.media.AudioManager;
 import android.media.AudioRecord;
+import android.media.AudioTrack;
 import android.media.MediaRecorder;
 import android.os.Environment;
 import android.util.Log;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 
 public class AudioRecordManager {
@@ -36,6 +41,8 @@ public class AudioRecordManager {
     private static final String TMP_RAW = Environment.getExternalStorageDirectory() + "/ali/tmp.raw";
     // 文件名
     private String mFileWav;
+
+    private File mSpeechFile;
 
     private boolean mIsRecording = false;
 
@@ -82,13 +89,13 @@ public class AudioRecordManager {
             Log.e("opus", "Opus tool init fail.");
             return;
         }
-        audioRecord.startRecording();
-        // 让录制状态为true
-        mIsRecording = true;
         // 开启音频文件写入线程
         new Thread(new AudioRecordThread()).start();
     }
 
+    public File getSpeechFile() {
+        return mSpeechFile;
+    }
 
     /**
      * 停止录音
@@ -102,8 +109,89 @@ public class AudioRecordManager {
     class AudioRecordThread implements Runnable {
         @Override
         public void run() {
-            writeDateTOFile();//往文件中写入裸数据
+            startRecordByOpus();
+//            writeDateTOFile();//往文件中写入裸数据
 //            copyWaveFile(TMP_RAW, mFileWav);//给裸数据加上头文件
+        }
+    }
+
+    private void startRecordByOpus() {
+        Log.i("demo", "开始录音");
+        //生成PCM文件
+        mSpeechFile = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/opus.pcm");
+
+        //如果存在，就先删除再创建
+        if (mSpeechFile.exists())
+            mSpeechFile.delete();
+
+        try {
+            mSpeechFile.createNewFile();
+
+        } catch (IOException e) {
+            throw new IllegalStateException("未能创建" + mSpeechFile.toString());
+        }
+        try {
+            //输出流
+            OutputStream os = new FileOutputStream(mSpeechFile);
+            BufferedOutputStream bos = new BufferedOutputStream(os);
+            DataOutputStream dos = new DataOutputStream(bos);
+            int bufferSize = 480;
+            AudioRecord audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, AUDIO_SAMPLE_RATE, AUDIO_CHANNEL, AUDIO_ENCODING, bufferSize);
+
+            short[] buffer = new short[bufferSize];
+            audioRecord.startRecording();
+            // 让录制状态为true
+            mIsRecording = true;
+            while (mIsRecording) {
+                int bufferReadResult = audioRecord.read(buffer, 0, bufferSize);
+                if (bufferReadResult >= 0) {
+                    //编码
+                    short[] encoderShort = OpusJniTool.opusEncoder(buffer, bufferReadResult);
+                    //解码
+                    short[] decodeShort = OpusJniTool.opusDecode(encoderShort, encoderShort.length, bufferReadResult);
+                    for (int i = 0; i < decodeShort.length; i++) {
+                        dos.writeShort(decodeShort[i]);
+                    }
+                }
+            }
+            audioRecord.stop();
+            dos.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.e("demo", "录音失败");
+        }
+    }
+
+    public void playRecord() {
+        Log.d("demo", "播放录音");
+
+        if (mSpeechFile == null) {
+            return;
+        }
+        //读取文件
+        int musicLength = (int) (mSpeechFile.length() / 2);
+        short[] music = new short[musicLength];
+        try {
+            InputStream is = new FileInputStream(mSpeechFile);
+            BufferedInputStream bis = new BufferedInputStream(is);
+            DataInputStream dis = new DataInputStream(bis);
+            int i = 0;
+            while (dis.available() > 0) {
+                music[i] = dis.readShort();
+                i++;
+            }
+            dis.close();
+            AudioTrack audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC,
+                    16000, AudioFormat.CHANNEL_OUT_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT,
+                    musicLength * 2,
+                    AudioTrack.MODE_STREAM);
+            audioTrack.play();
+            audioTrack.write(music, 0, musicLength);
+            audioTrack.stop();
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.e("demo", "播放失败");
         }
     }
 
