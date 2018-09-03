@@ -4,30 +4,27 @@
 
 
 #include "opus-build.h"
-#include "../include/opus.h"
 
 
 OpusDecoder *initDecoderCreate(int fs, int channels) {
     int error;
-    OpusDecoder *opusDecoder =  opus_decoder_create(fs, channels, &error);
+    OpusDecoder *decoder;
+    decoder = opus_decoder_create(fs, channels, &error);
     if (error < 0) {
         return NULL;
     } else {
-        return opusDecoder;
+        return decoder;
     }
 }
 
-//fs = 1600, channels = 1
 OpusEncoder *initEncoderCreate(int fs, int channels) {
     int error;
-    OpusEncoder *opusEncoder = opus_encoder_create(fs, channels, OPUS_APPLICATION_VOIP, &error);
+    OpusEncoder *opusEncoder;
+    opusEncoder = opus_encoder_create(fs, channels, OPUS_APPLICATION_AUDIO, &error);
     if (error < 0) {
         return NULL;
     } else {
-        opus_encoder_ctl(opusEncoder, OPUS_SET_VBR(1));
-        opus_encoder_ctl(opusEncoder, OPUS_SET_BITRATE(27800));
-        opus_encoder_ctl(opusEncoder, OPUS_SET_COMPLEXITY(8));
-        opus_encoder_ctl(opusEncoder, OPUS_SET_SIGNAL(OPUS_SIGNAL_VOICE));
+        opus_encoder_ctl(opusEncoder, OPUS_SET_COMPLEXITY(5));
         return opusEncoder;
     }
 }

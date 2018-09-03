@@ -5,11 +5,12 @@ public class OpusJniTool {
         System.loadLibrary("opus_tool");
     }
 
-    public static native int initOpusCodec();
+    public static native int initOpus();
 
-    public static native int opusCodecEncode(short[] lin, int offset, byte[] encoded);
-    public static native int opusCodecDecode(byte[] encoded, int byteNum, short[] lin);
+    public static native short[] opusEncoder(short[] buffer, int length);
 
-    public static native int opusCodecClose();
+    public static native short[] opusDecode(short[] buffer, int bufferLength,int pcmLength);
+
+    public static native int close();
 
 }

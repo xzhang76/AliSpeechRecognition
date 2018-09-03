@@ -1,27 +1,23 @@
 #include <jni.h>
-#include "include/opus.h"
+#include <string>
+#include <opus.h>
+#include <malloc.h>
+
+extern "C" {
+#include <opus-build.h>
+}
 
 OpusDecoder *opusDecoder;
 OpusEncoder *opusEncoder;
 int channels = 1;
-int fs = 16000;
-
-const int FRAME_SAMPLES = 320;
+int fs = 48000;
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_example_imac_alivoicerecognition_OpusJniTool_initOpusCodec(JNIEnv *env, jobject instance) {
+Java_com_example_imac_alivoicerecognition_OpusJniTool_initOpus(JNIEnv *env, jobject instance) {
 
-    int error;
-    OpusEncoder *opusEncoder = opus_encoder_create(16000, 1, OPUS_APPLICATION_VOIP,
-                                                &error);
-    if (opusEncoder) {
-        opus_encoder_ctl(opusEncoder, OPUS_SET_VBR(1));
-        opus_encoder_ctl(opusEncoder, OPUS_SET_BITRATE(27800));
-        opus_encoder_ctl(opusEncoder, OPUS_SET_COMPLEXITY(8));
-        opus_encoder_ctl(opusEncoder, OPUS_SET_SIGNAL(OPUS_SIGNAL_VOICE));
-    }
-    OpusDecoder *opusDecoder = opus_decoder_create(16000, 1, &error);
+    opusDecoder = initDecoderCreate(fs, channels);
+    opusEncoder = initEncoderCreate(fs, channels);
     if (opusDecoder != NULL && opusEncoder != NULL) {
         return 0;
     } else {
@@ -29,53 +25,33 @@ Java_com_example_imac_alivoicerecognition_OpusJniTool_initOpusCodec(JNIEnv *env,
     }
 }
 
-extern "C"
-JNIEXPORT jint JNICALL Java_com_example_imac_alivoicerecognition_OpusJniTool_opusCodecEncode
-        (JNIEnv* env,jobject thiz, jshortArray samples, jint offset,
-         jbyteArray bytes){
-    if (!opusEncoder || !samples || !bytes)
-        return 0;
-    jshort *pSamples = env->GetShortArrayElements(samples, 0);
-    jsize nSampleSize = env->GetArrayLength(samples);
-    jbyte *pBytes = env->GetByteArrayElements(bytes, 0);
-    jsize nByteSize = env->GetArrayLength(bytes);
-    if (nSampleSize-offset < FRAME_SAMPLES || nByteSize <= 0)
-        return 0;
-    int nRet = opus_encode(opusEncoder, pSamples+offset, FRAME_SAMPLES, (unsigned char*)pBytes, nByteSize);
-    env->ReleaseShortArrayElements(samples, pSamples, 0);
-    env->ReleaseByteArrayElements(bytes, pBytes, 0);
-    return nRet;
-}
 
 extern "C"
-JNIEXPORT jint JNICALL Java_com_example_imac_alivoicerecognition_OpusJniTool_opusCodecDecode
-        (JNIEnv* env, jobject thiz, jbyteArray bytes, jint bytelength, jshortArray samples){
-    if (!opusDecoder || !samples || !bytes)
-        return 0;
-    jshort *pSamples = env->GetShortArrayElements(samples, 0);
-    jbyte *pBytes = env->GetByteArrayElements(bytes, 0);
-    jsize nByteSize = env->GetArrayLength(bytes);
-    // jint nbyte = bytes[0];
-    if (bytelength<=0)
-    {
-        return -1;
-    }
-    int nRet = opus_decode(opusDecoder, (unsigned char*)pBytes, bytelength, pSamples, FRAME_SAMPLES, 0);
-    env->ReleaseShortArrayElements(samples, pSamples, 0);
-    env->ReleaseByteArrayElements(bytes, pBytes, 0);
-    return nRet;
-}
+JNIEXPORT jshortArray JNICALL
+Java_com_example_imac_alivoicerecognition_OpusJniTool_opusEncoder(JNIEnv *env, jclass type, jshortArray buffer_,
+                                           jint length) {
+    jshort *buffer = env->GetShortArrayElements(buffer_, NULL);
+    short outBuffer[length];
+    int len = opus_encodes(opusEncoder, buffer, length, outBuffer);
+    jshortArray shortArray = env->NewShortArray(len);
+    env->SetShortArrayRegion(shortArray, 0, len, outBuffer);
+    env->ReleaseShortArrayElements(buffer_, buffer, 0);
+    return shortArray;
 
-
-
-extern "C"
+}extern "C"
+JNIEXPORT jshortArray JNICALL
+Java_com_example_imac_alivoicerecognition_OpusJniTool_opusDecode(JNIEnv *env, jclass type, jshortArray buffer_,
+                                          jint bufferLength, jint pcmLength) {
+    jshort *buffer = env->GetShortArrayElements(buffer_, NULL);
+    opus_int16 outBufferPc[pcmLength];
+    int lenPc = opus_decodes(opusDecoder, buffer, bufferLength, outBufferPc);
+    jshortArray shortArrays = env->NewShortArray(lenPc);
+    env->SetShortArrayRegion(shortArrays, 0, lenPc, outBufferPc);
+    env->ReleaseShortArrayElements(buffer_, buffer, 0);
+    return shortArrays;
+}extern "C"
 JNIEXPORT jint JNICALL
-Java_com_example_imac_alivoicerecognition_OpusJniTool_opusCodecClose(JNIEnv *env, jclass type) {
-    if (!opusEncoder)
-        return -1;
-    opus_encoder_destroy(opusEncoder);
-    if (!opusDecoder)
-        return -1;
-    opus_decoder_destroy(opusDecoder);
+Java_com_example_imac_alivoicerecognition_OpusJniTool_close(JNIEnv *env, jclass type) {
+    close(opusEncoder, opusDecoder);
     return 0;
 }
