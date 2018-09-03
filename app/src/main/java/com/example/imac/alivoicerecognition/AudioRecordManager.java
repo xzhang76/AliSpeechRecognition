@@ -78,7 +78,7 @@ public class AudioRecordManager {
      * 开始录音
      */
     public void startRecord() {
-        if (OpusJniTool.initOpus() != 0) {
+        if (OpusJniTool.initOpusCodec() != 0) {
             Log.e("opus", "Opus tool init fail.");
             return;
         }
@@ -96,13 +96,13 @@ public class AudioRecordManager {
     public void stopRecord() {
         Log.d("demo", "stopRecord");
         mIsRecording = false;//停止文件写入
-        OpusJniTool.close();
+        OpusJniTool.opusCodecClose();
     }
 
     class AudioRecordThread implements Runnable {
         @Override
         public void run() {
-            writeDateTOFile();//往文件中写入裸数据
+            writeDataToFile();//往文件中写入裸数据
 //            copyWaveFile(TMP_RAW, mFileWav);//给裸数据加上头文件
         }
     }
@@ -112,10 +112,10 @@ public class AudioRecordManager {
      * 如果需要播放就必须加入一些格式或者编码的头信息。但是这样的好处就是你可以对音频的 裸数据进行处理，比如你要做一个爱说话的TOM
      * 猫在这里就进行音频的处理，然后重新封装 所以说这样得到的音频比较容易做一些音频的处理。
      */
-    private void writeDateTOFile() {
+    private void writeDataToFile() {
         // new一个byte数组用来存一些字节数据，大小为缓冲区大小
         int bufferSize = 480;
-        short[] audioData = new short[bufferSize];
+        short[] audioData = new short[bufferSizeInBytes];
         int readSize = 0;
         DataOutputStream dos = null;
         try {
@@ -128,12 +128,14 @@ public class AudioRecordManager {
             dos = new DataOutputStream(bos);
 
             while (mIsRecording) {
-                readSize = audioRecord.read(audioData, 0, bufferSize);
+                readSize = audioRecord.read(audioData, 0, bufferSizeInBytes);
                 if (AudioRecord.ERROR_INVALID_OPERATION != readSize) {
                     //编码
-                    short[] encoderShort = OpusJniTool.opusEncoder(audioData, readSize);
+                    byte[] encoded = new byte[readSize];
+                    OpusJniTool.opusCodecEncode(audioData, readSize, encoded);
                     //解码
-                    short[] decodeShort = OpusJniTool.opusDecode(encoderShort, encoderShort.length, readSize);
+                    short[] decodeShort = new short[encoded.length];
+                    OpusJniTool.opusCodecDecode(encoded, encoded.length, decodeShort);
 
                     for (int i = 0; i < decodeShort.length; i++) {
                         dos.writeShort(decodeShort[i]);
